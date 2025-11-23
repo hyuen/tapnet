@@ -4,6 +4,8 @@ WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install git+https://github.com/google-deepmind/tapnet.git
+RUN pip install -q git+https://github.com/google-deepmind/recurrentgemma.git@main
 
 COPY app/ ./app/
 

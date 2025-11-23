@@ -3,3 +3,5 @@ uvicorn[standard]
 gunicorn
 torch
 torchvision
+tqdm
+numpy
