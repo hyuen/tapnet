@@ -5,3 +5,5 @@ torch
 torchvision
 tqdm
 numpy
+tensorflow
+tensorflow_datasets
