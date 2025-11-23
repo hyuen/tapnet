@@ -1,3 +1,8 @@
+from tapnet.tapnext.tapnext_torch import TAPNext
+from tapnet.tapnext.tapnext_torch_utils import restore_model_from_jax_checkpoint, tracker_certainty
+import torch.nn.functional as F
+import tqdm
+
 def run_eval_per_frame(
     model,
     batch,
@@ -115,3 +120,4 @@ def get_model():
     ckpt_path = 'bootstapnext_ckpt.npz'
     model = restore_model_from_jax_checkpoint(model, ckpt_path)
     model.cuda()
+    return model
