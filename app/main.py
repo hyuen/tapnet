@@ -13,12 +13,17 @@ from contextlib import asynccontextmanager
 import numpy as np
 import torch.nn.functional as F
 import logging
-
+from threading import Semaphore
 
 logger = logging.getLogger('uvicorn.error')
 
 models = {}
 
+# prevent from running more than one inference at a time,
+# we should be batching instead of running concurrent executions
+sem = Semaphore(1)
+
+# startup code
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Load the ML model
@@ -36,51 +41,38 @@ def read_root():
     return {"Helslo": "World This is a test 2"}
 
 
-
+# dummy example
 @app.get("/process/{n}")
 def process_number(n: int):
-    assert 'tapnet' in models, "Model not loaded"
-    model = models['tapnet']
-    var = torch.rand(n, n)
+    with sem:
+        assert 'tapnet' in models, "Model not loaded"
+        model = models['tapnet']
 
-    batch = []
-    batch_elem = {
-        'video':torch.randn(1,90,256,256,3,dtype=torch.float32),
-        'query_points':torch.randn(1,5,3,dtype=torch.float64),
-        'target_points':torch.randn(1,5,90,2,dtype=torch.float64),
-        'occluded':torch.zeros(1,5,90,dtype=torch.bool)
-    }
-    batch_elem = {k: v.cuda().float() for k, v in batch_elem.items()}
-    
-    logger.info("Received request")
-    batch.append(batch_elem)
-    logger.info(f"{batch[0]['video'].shape}")
-    with torch.amp.autocast('cuda', dtype=torch.float16, enabled=True):
-        tracks, occluded, scores = run_eval_per_frame(
-            model, batch, get_trackwise_metrics=False, use_certainty=False
-    )
-    logger.info(f"{tracks.shape=}, {occluded.shape=}, {scores.shape=}")
+        batch = []
+        batch_elem = {
+            'video':torch.randn(1,90,256,256,3,dtype=torch.float32),
+            'query_points':torch.randn(1,5,3,dtype=torch.float64),
+            'target_points':torch.randn(1,5,90,2,dtype=torch.float64),
+            'occluded':torch.zeros(1,5,90,dtype=torch.bool)
+        }
+        batch_elem = {k: v.cuda().float() for k, v in batch_elem.items()}
+        
+        logger.info("Received request")
+        batch.append(batch_elem)
+        logger.info(f"{batch[0]['video'].shape}")
+        for batch_elem in batch:
+            with torch.amp.autocast('cuda', dtype=torch.float16, enabled=True):
+                tracks, occluded, scores = run_eval_per_frame(
+                    model, batch_elem, get_trackwise_metrics=False, use_certainty=False
+            )
+            logger.info(f"{tracks.shape=}, {occluded.shape=}, {scores=}")
 
-    iob = io.BytesIO()
-    torch.save(var, iob)
-    r = base64.b64encode(iob.getvalue()).decode('utf-8')
-    return {"squared": r}
+        return {"tracks": str(tracks.__repr__()),
+            "occluded": str(occluded.__repr__()),
+            "scores": str(scores.__repr__())}
 
+
+# TODO: run real example
 @app.get("/real_process/{data}")
 def process_number(data: str):
-    assert 'tapnet' in models, "Model not loaded"
-    model = models['tapnet']
-
-    data = base64.b64decode(data.encode('utf-8'))
-    tensor = torch.load(io.BytesIO(data))
-
-    batch = {k: torch.from_numpy(v).cuda().float() for k, v in batch.items()}
-
-
-
-    var = torch.rand(n, n)
-
-    iob = io.BytesIO()
-    torch.save(var, iob)
-    r = base64.b64encode(iob.getvalue()).decode('utf-8')
-    return {"squared": r}
+    pass
