@@ -38,7 +38,7 @@ app = FastAPI(lifespan=lifespan)
 
 @app.get("/")
 def read_root():
-    return {"Helslo": "World This is a test 2"}
+    return {"Hello": "World This is a test"}
 
 
 # dummy example
