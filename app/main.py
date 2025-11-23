@@ -44,12 +44,22 @@ def process_number(n: int):
     var = torch.rand(n, n)
 
     batch = []
-
+    batch_elem = {
+        'video':torch.randn(1,90,256,256,3,dtype=torch.float32),
+        'query_points':torch.randn(1,5,3,dtype=torch.float64),
+        'target_points':torch.randn(1,5,90,2,dtype=torch.float64),
+        'occluded':torch.zeros(1,5,90,dtype=torch.bool)
+    }
+    batch_elem = {k: v.cuda().float() for k, v in batch_elem.items()}
+    
+    logger.info("Received request")
+    batch.append(batch_elem)
+    logger.info(f"{batch[0]['video'].shape}")
     with torch.amp.autocast('cuda', dtype=torch.float16, enabled=True):
         tracks, occluded, scores = run_eval_per_frame(
             model, batch, get_trackwise_metrics=False, use_certainty=False
     )
-
+    logger.info(f"{tracks.shape=}, {occluded.shape=}, {scores.shape=}")
 
     iob = io.BytesIO()
     torch.save(var, iob)

@@ -2,6 +2,7 @@ from tapnet.tapnext.tapnext_torch import TAPNext
 from tapnet.tapnext.tapnext_torch_utils import restore_model_from_jax_checkpoint, tracker_certainty
 import torch.nn.functional as F
 import tqdm
+import torch
 
 def run_eval_per_frame(
     model,
